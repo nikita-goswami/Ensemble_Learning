@@ -354,15 +354,111 @@ train_df <- data.frame(y_true = y_true_train, y_rf = y_hat_train_rf, y_svm_linea
 train_df
 
 cv_df <- data.frame(y_true = y_true_cv, y_rf = y_hat_cv_rf, y_svm_linear = y_hat_cv_linear_svm,
-                       y_svm_radial = y_hat_cv_radial_svm, y_lda = y_hat_cv_lda, y_logistic = y_hat_cv_lda,
-                       y_boosting = round(y_hat_cv_boost))
+                    y_svm_radial = y_hat_cv_radial_svm, y_lda = y_hat_cv_lda, y_logistic = y_hat_cv_lda,
+                    y_boosting = round(y_hat_cv_boost))
 cv_df
 
 test_df <- data.frame(y_true = y_true_test, y_rf = y_hat_test_rf, y_svm_linear = y_hat_test_linear_svm,
-                    y_svm_radial = y_hat_test_radial_svm, y_lda = y_hat_test_lda, y_logistic = y_hat_test_lda,
-                    y_boosting = round(y_hat_test_boost))
+                      y_svm_radial = y_hat_test_radial_svm, y_lda = y_hat_test_lda, y_logistic = y_hat_test_lda,
+                      y_boosting = round(y_hat_test_boost))
 test_df
 
 write.csv(train_df, "Ensemble Train Data.csv")
 write.csv(cv_df, "Ensemble CV Data.csv")
 write.csv(test_df, "Ensemble Test Data.csv")
+
+
+
+############################################################################################
+### Stacking
+############################################################################################
+
+train_ensemble <- read.csv(file ="Ensemble Train Data.csv", sep = ",",header = TRUE, stringsAsFactors = FALSE)
+test_ensemble <- read.csv(file ="Ensemble Test Data.csv", sep = ",",header = TRUE, stringsAsFactors = FALSE)
+cv_ensemble <- read.csv(file ="Ensemble CV Data.csv", sep = ",",header = TRUE, stringsAsFactors = FALSE)
+
+# Removing the index column
+train_ensemble$X <- NULL
+test_ensemble$X <- NULL
+cv_ensemble$X <- NULL
+
+### Fitting Logistic Regression
+
+# train_ensemble$y_true <- as.factor(train_ensemble$y_true)
+# test_ensemble$y_true <- as.factor(test_ensemble$y_true)
+# cv_ensemble$y_true <- as.factor(cv_ensemble$y_true)
+glm.fit <- glm(y_true~.,data=train_ensemble,family = "binomial")
+
+
+# Predict
+glm.probs.train <- predict(glm.fit, newdata = train_ensemble, type = "response")
+y_hat_train_lr <- round(glm.probs.train)
+
+logistic_train_err <- sum(abs(y_hat_train_lr- train_ensemble$y_true))/length(y_hat_train_lr)
+logistic_train_err # 0
+
+logistic_train_accuracy <- 1 - logistic_train_err
+logistic_train_accuracy # 1
+
+glm.probs.cv <- predict(glm.fit, newdata = cv_ensemble, type = "response")
+y_hat_cv_lr <- round(glm.probs.cv)
+
+logistic_cv_err <- sum(abs(y_hat_cv_lr- cv_ensemble$y_true))/length(y_hat_cv_lr)
+logistic_cv_err # 0.1646
+
+logistic_cv_accuracy <- 1 - logistic_cv_err
+logistic_cv_accuracy # 0.8353
+
+glm.probs.test <- predict(glm.fit, newdata = test_ensemble, type = "response")
+y_hat_test_lr <- round(glm.probs.test)
+
+logistic_test_err <- sum(abs(y_hat_test_lr- test_ensemble$y_true))/length(y_hat_test_lr)
+logistic_test_err # 0.1316
+
+logistic_test_accuracy <- 1 - logistic_test_err
+logistic_test_accuracy # 0.8683
+
+# Beta estimates from Logistic Regression Stack 
+#(Intercept)          y_rf  y_svm_linear  y_svm_radial         y_lda    y_logistic    y_boosting 
+#-2.656607e+01  5.313214e+01  2.116646e-11 -1.333248e-09 -5.388857e-12            NA -2.239468e-11 
+
+# NA as a coefficient in a regression indicates that the variable in question is linearly related to the other variables
+
+
+
+# Trying KNN for stacking
+y_true <- train_ensemble$y_true
+KNN <- knn(train_ensemble, train_ensemble, y_true, 3, use.all = FALSE)
+
+
+# Trying PCR for stacking
+pcr.mod <- pcr(y_true~., data = train_ensemble, scale = TRUE, validation = "CV")
+summary(pcr.mod)
+names(pcr.mod)
+coef(pcr.mod$finalModel)
+
+# Plot the root mean squared error
+validationplot(pcr.mod, val.type = "MSEP")
+validationplot(pcr.mod, val.type = "R2")
+# 90% variability in the data can be explained by using 9 PC
+
+pred_pcr_test=predict(pcr.mod,test_ensemble,ncomp=2)
+
+pred_pcr_test_class<-ifelse (pred_pcr<0.35,1,0)
+sum(abs(pred_pcr_test_class-test_ensemble$y_true))/length(pred_pcr_test_class)
+
+# 86.49%
+
+
+pred_pcr_cv=predict(pcr.mod,cv_ensemble,ncomp=2)
+
+pred_pcr_cv_class<-ifelse (pred_pcr_cv<0.5,1,0)
+sum(abs(pred_pcr_cv_class-cv_ensemble$y_true))/length(pred_pcr_cv_class)
+
+
+# 81.98%
+
+
+
+  
+
