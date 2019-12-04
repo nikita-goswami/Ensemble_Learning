@@ -20,6 +20,7 @@ library(gbm) # For boosting algorithm
 library(MASS) # For LDA
 library(DataExplorer) # For cool visualizations
 library(gbm)
+library(e1071)
 
 # Loading Data and combining test and train data into one
 housing_data_train <- read.table(file ="train.csv", sep = ",",header = TRUE)
@@ -348,24 +349,24 @@ lda_test_err # 0.1384615
 lda_test_accuracy <- 1 - lda_test_err
 lda_test_accuracy # 0.8615385
 
-train_df <- data.frame(y_true = y_true_train, y_rf = y_hat_train_rf, y_svm_linear = y_hat_train_linear_svm,
+train_df_var <- data.frame(GrLivArea = X_Train$GrLivArea, Neighborhood =X_Train$Neighborhood, LotArea=X_Train$LotArea, X1stFlrSF=X_Train$X1stFlrSF, OverallQual = X_Train$OverallQual ,y_true = y_true_train, y_rf = y_hat_train_rf, y_svm_linear = y_hat_train_linear_svm,
                        y_svm_radial = y_hat_train_radial_svm, y_lda = y_hat_train_lda, y_logistic = y_hat_train_lda,
                        y_boosting = round(y_hat_train_boost))
-train_df
+train_df_var
 
-cv_df <- data.frame(y_true = y_true_cv, y_rf = y_hat_cv_rf, y_svm_linear = y_hat_cv_linear_svm,
+cv_df_var <- data.frame(GrLivArea = X_Validation$GrLivArea, Neighborhood =X_Validation$Neighborhood, LotArea=X_Validation$LotArea, X1stFlrSF=X_Validation$X1stFlrSF, OverallQual = X_Validation$OverallQual,y_true = y_true_cv, y_rf = y_hat_cv_rf, y_svm_linear = y_hat_cv_linear_svm,
                     y_svm_radial = y_hat_cv_radial_svm, y_lda = y_hat_cv_lda, y_logistic = y_hat_cv_lda,
                     y_boosting = round(y_hat_cv_boost))
-cv_df
+cv_df_var
 
-test_df <- data.frame(y_true = y_true_test, y_rf = y_hat_test_rf, y_svm_linear = y_hat_test_linear_svm,
+test_df_var <- data.frame(GrLivArea = X_Test$GrLivArea, Neighborhood =X_Test$Neighborhood, LotArea=X_Test$LotArea, X1stFlrSF=X_Test$X1stFlrSF, OverallQual = X_Test$OverallQual, y_true = y_true_test, y_rf = y_hat_test_rf, y_svm_linear = y_hat_test_linear_svm,
                       y_svm_radial = y_hat_test_radial_svm, y_lda = y_hat_test_lda, y_logistic = y_hat_test_lda,
                       y_boosting = round(y_hat_test_boost))
-test_df
+test_df_var
 
-write.csv(train_df, "Ensemble Train Data.csv")
-write.csv(cv_df, "Ensemble CV Data.csv")
-write.csv(test_df, "Ensemble Test Data.csv")
+write.csv(train_df_var, "Ensemble Train Data Stacking.csv")
+write.csv(cv_df_var, "Ensemble CV Data Stacking.csv")
+write.csv(test_df_var, "Ensemble Test Data Stacking.csv")
 
 
 
